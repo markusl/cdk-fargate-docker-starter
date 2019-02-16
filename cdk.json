@@ -1,0 +1,4 @@
+{
+  "app": "node dist/bin/cdk-fargate-docker-starter.js",
+  "context": {}
+}

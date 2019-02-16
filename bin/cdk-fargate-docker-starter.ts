@@ -1,0 +1,46 @@
+#!/usr/bin/env node
+import * as cdk from '@aws-cdk/cdk';
+import * as ecs from '@aws-cdk/aws-ecs';
+import { createStack } from '../lib/cdk-fargate-starter-docker-stack';
+
+// Name for the app and prefix for all created resources
+const appName = 'AppName';
+
+// Define region and acconunt for the stack
+const stackProperties = {
+    env: {
+        region: 'eu-west-1',
+        account: 'xxxxxxxxxx',
+    }
+};
+
+const certificateIdentifier = '0b3aa150-012c-4f0d-9f4d-db57a651939b';
+
+// Use predefined hosted zone and a domain certificate
+const dnsProperties = {
+    domainName: 'olmi.be',
+    subdomainName: 'site',
+    domainCertificateArn: `arn:aws:acm:${stackProperties.env.region}:${stackProperties.env.account}:certificate/${certificateIdentifier}`,
+};
+
+const tags: { name: string, value: string }[] = [
+    { name: 'Application', value: 'starter-app' },
+    { name: 'CostCenter', value: '10001' }, 
+    { name: 'WorkOrder', value: 'APROJECT', }
+];
+
+// From where to build the docker image
+const containerDirectory = './app';
+
+// Define some environment properties for the image
+const environment = { APP_ENVIRONMENT: 'test' };
+
+const app = new cdk.App();
+const imageProvider = (scope: cdk.Construct) =>
+    ecs.ContainerImage.fromAsset(scope, `${appName}Image`, { directory: containerDirectory });
+    // alternatively use container image directly from docker hub
+    // ecs.ContainerImage.fromDockerHub('amazon/amazon-ecs-sample');
+
+const dockerProperties =  { imageProvider, containerPort: 80, environment };
+createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);
+app.run();
