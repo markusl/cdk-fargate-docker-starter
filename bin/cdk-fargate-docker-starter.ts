@@ -10,11 +10,11 @@ const appName = 'AppName';
 const stackProperties = {
     env: {
         region: 'eu-west-1',
-        account: 'xxxxxxxxxx',
+        account: '872821666058',
     }
 };
 
-const certificateIdentifier = '0b3aa150-012c-4f0d-9f4d-db57a651939b';
+const certificateIdentifier = '797eea2c-26c3-416d-9a24-2f093998383f';
 
 // Use predefined hosted zone and a domain certificate
 const dnsProperties = {
@@ -36,6 +36,8 @@ const containerDirectory = './app';
 const environment = { APP_ENVIRONMENT: 'test' };
 
 const app = new cdk.App();
+
+// Callback that will provide the correct image to the cluster
 const imageProvider = (scope: cdk.Construct) =>
     ecs.ContainerImage.fromAsset(scope, `${appName}Image`, { directory: containerDirectory });
     // alternatively use container image directly from docker hub

@@ -2,9 +2,16 @@
 
 This repository shows an example of how to deploy a simple docker image to a Fargate cluster using AWS CDK.
 
-The stack will also configure a domain name and a HTTPS listener for the service.
+Read more of CDK at <https://docs.aws.amazon.com/CDK/latest/userguide/what-is.html>
 
-Read more of CDK at <https://docs.aws.amazon.com/CDK/latest/userguide/what-is.html.>
+Features:
+
+* Fargate cluster. Multiple availability zones
+* Nginx server serving static site (just an example of a docker image)
+* Pass environment parameters to the container
+* Configure a domain namem certificate and a HTTPS listener for the service
+* Creates ALB redirect from HTTP to the HTTPS endpoint
+* Resource tagging
 
 ## Configure required AWS account
 
