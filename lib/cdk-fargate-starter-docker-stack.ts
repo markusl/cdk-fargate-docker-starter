@@ -93,7 +93,7 @@ const configureClusterAndLoadBalancer = (
       port: dockerProperties.containerPort,
       targets: [fargateService],
     });
-  return { vpc, loadBalancer };
+  return { vpc, fargateService, loadBalancer };
 };
 
 export function createStack(scope: cdk.App,
@@ -108,9 +108,10 @@ export function createStack(scope: cdk.App,
   const certificate = cm.Certificate.import(stack, `${id}Certificate`, {
     certificateArn: domainProperties.domainCertificateArn,
   });
-  const { vpc, loadBalancer } = configureClusterAndLoadBalancer(id, stack, certificate, dockerProperties);
+  const { vpc, fargateService, loadBalancer } = configureClusterAndLoadBalancer(id, stack, certificate, dockerProperties);
   tags.forEach((tag) => vpc.node.apply(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => loadBalancer.node.apply(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) => fargateService.node.apply(new cdk.Tag(tag.name, tag.value)));
 
   const zone = new route53.HostedZoneProvider(stack, {
     domainName: domainProperties.domainName
