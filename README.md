@@ -6,8 +6,9 @@ Read more of CDK at <https://docs.aws.amazon.com/CDK/latest/userguide/what-is.ht
 
 Features:
 
-* Fargate cluster. Multiple availability zones
+* Fargate cluster with multiple availability zones
 * Nginx server serving static site (just an example of a docker image)
+* Running multiple containers on different context paths
 * Pass environment parameters to the container
 * Configure a domain namem certificate and a HTTPS listener for the service
 * Creates ALB redirect from HTTP to the HTTPS endpoint

@@ -32,17 +32,14 @@ const tags: { name: string, value: string }[] = [
 // From where to build the docker image
 const containerDirectory = './app';
 
-// Define some environment properties for the image
-const environment = { APP_ENVIRONMENT: 'test' };
-
 const app = new cdk.App();
 
 // Callback that will provide the correct image to the cluster
-const imageProvider = (scope: cdk.Construct) =>
-    ecs.ContainerImage.fromAsset(scope, `${appName}Image`, { directory: containerDirectory });
+const imageProvider = (scope: cdk.Construct, id: string) =>
+    ecs.ContainerImage.fromAsset(scope, id, { directory: containerDirectory });
     // alternatively use container image directly from docker hub
     // ecs.ContainerImage.fromDockerHub('amazon/amazon-ecs-sample');
 
-const dockerProperties =  { imageProvider, containerPort: 80, environment };
+const dockerProperties =  { imageProvider, containerPort: 80 };
 createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);
 app.run();
