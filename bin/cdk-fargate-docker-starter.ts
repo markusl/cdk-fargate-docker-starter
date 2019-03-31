@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/cdk';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { createStack } from '../lib/cdk-fargate-starter-docker-stack';
+import { createStack, ContainerProperties } from '../lib/cdk-fargate-starter-docker-stack';
 
 // Name for the app and prefix for all created resources
 const appName = 'AppName';
@@ -34,12 +34,33 @@ const containerDirectory = './app';
 
 const app = new cdk.App();
 
-// Callback that will provide the correct image to the cluster
-const imageProvider = (scope: cdk.Construct, id: string) =>
-    ecs.ContainerImage.fromAsset(scope, id, { directory: containerDirectory });
-    // alternatively use container image directly from docker hub
-    // ecs.ContainerImage.fromDockerHub('amazon/amazon-ecs-sample');
+// alternatively use container image directly from docker hub
+// ecs.ContainerImage.fromDockerHub('amazon/amazon-ecs-sample');
 
-const dockerProperties =  { imageProvider, containerPort: 80 };
+const dockerProperties: ContainerProperties[] = [
+  {
+    imageProvider: (scope: cdk.Construct) =>
+        ecs.ContainerImage.fromAsset(scope, 'AppName1Image', { directory: containerDirectory }),
+    containerPort: 80,
+    id: 'AppName1',
+    pathPattern: '/example*',
+    environment: { APP_ENVIRONMENT: `env-AppName1` },
+  },
+  {
+    imageProvider: (scope: cdk.Construct) =>
+        ecs.ContainerImage.fromAsset(scope, 'AppName2Image', { directory: containerDirectory }),
+    containerPort: 80,
+    id: 'AppName2',
+    pathPattern: '/v2*',
+    environment: { APP_ENVIRONMENT: `env-AppName2` },
+  },
+  {
+    imageProvider: (_: cdk.Construct) =>
+        ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
+    containerPort: 80,
+    id: 'EcsSample',
+    environment: { APP_ENVIRONMENT: `env-EcsSample` },
+  },
+];
 createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);
 app.run();

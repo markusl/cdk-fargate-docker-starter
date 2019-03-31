@@ -19,9 +19,17 @@ interface DomainProperties {
   domainCertificateArn: string;
 }
 
-interface DockerProperties {
-  imageProvider: (scope: cdk.Construct, id: string) => ecs.ContainerImage;
+// Definitions for a single service
+export interface ContainerProperties {
+  imageProvider: (scope: cdk.Construct) => ecs.ContainerImage;
+  // The container port
   containerPort: number;
+  // Unique id of the service
+  id: string;
+  // Environment variables for the container
+  environment: { [key: string]: string; };
+  // Define the path or leave empty for default target
+  pathPattern?: string;
 }
 
 /// Creates ALB redirect from port 80 to the HTTPS endpoint
@@ -45,17 +53,17 @@ const createHttpsRedirect = (id: string, scope: cdk.Construct, loadBalancer: elb
   return new elbv2.CfnListener(scope, `${id}HttpRedirect`, redirectProps);
 };
 
-const createTaskDefinition = (id: string, stack: cdk.Stack, dockerProperties: DockerProperties) => {
+const createTaskDefinition = (id: string, stack: cdk.Stack, containerProperties: ContainerProperties) => {
   const taskDefinition = new ecs.FargateTaskDefinition(stack, `${id}TaskDefinition`);
   taskDefinition.taskRole.attachManagedPolicy(ssmPolicy);
   taskDefinition
     .addContainer(`${id}Container`, {
-      image: dockerProperties.imageProvider(stack, `${id}Image`),
+      image: containerProperties.imageProvider(stack),
       memoryLimitMiB: 256,
-      environment: { APP_ENVIRONMENT: `env-${id}` },
+      environment: containerProperties.environment,
     })
     .addPortMappings({
-      containerPort: dockerProperties.containerPort,
+      containerPort: containerProperties.containerPort,
       protocol: ecs.Protocol.Tcp,
     });
   return taskDefinition;
@@ -65,21 +73,17 @@ const configureClusterAndServices = (
   id: string,
   stack: cdk.Stack,
   certificate: cm.ICertificate,
-  dockerProperties: DockerProperties) => {
+  containerProperties: ContainerProperties[]) => {
 
   // NOTE: Limit AZs to avoid reaching resource quotas
   const vpc = new ec2.VpcNetwork(stack, `${id}Vpc`, { maxAZs: 2 });
   const cluster = new ecs.Cluster(stack, `${id}Cluster`, { vpc });
 
-  const fargateService1 = new ecs.FargateService(stack, `${id}FargateService-1`, {
+  const services = containerProperties.map((container) => 
+    new ecs.FargateService(stack, `${container.id}FargateService`, {
     cluster,
-    taskDefinition: createTaskDefinition(`${id}-1`, stack, dockerProperties),
-  });
-
-  const fargateService2 = new ecs.FargateService(stack, `${id}FargateService-2`, {
-    cluster,
-    taskDefinition: createTaskDefinition(`${id}-2`, stack, dockerProperties),
-  });
+    taskDefinition: createTaskDefinition(`${container.id}`, stack, container),
+  }));
 
   const loadBalancer = new elbv2.ApplicationLoadBalancer(stack, `${id}LoadBalancer`, {
     vpc,
@@ -91,25 +95,22 @@ const configureClusterAndServices = (
       port: 443,
       certificateArns: [certificate.certificateArn],
     });
-  // Configure path /v2 to route to the second service
-  listener.addTargets(`${id}HttpTarget-2`, {
-      protocol: elbv2.ApplicationProtocol.Http,
-      port: dockerProperties.containerPort,
-      targets: [fargateService2],
-      pathPattern: '/v2*',
-      priority: 20,
-    });
-  listener.addTargets(`${id}HttpTarget-1`, {
-      protocol: elbv2.ApplicationProtocol.Http,
-      port: dockerProperties.containerPort,
-      targets: [fargateService1],
-    });
-  return { vpc, fargateService1, fargateService2, loadBalancer };
+  
+  services.forEach((service, i) =>
+    listener.addTargets(`${containerProperties[i].id}HttpTarget`, {
+        protocol: elbv2.ApplicationProtocol.Http,
+        port: containerProperties[i].containerPort,
+        targets: [service],
+        pathPattern: containerProperties[i].pathPattern,
+        // Specify priority only if path is specified
+        priority: containerProperties[i].pathPattern ? i * 10 + 20 : undefined,
+    }));
+  return { vpc, loadBalancer, services };
 };
 
 export function createStack(scope: cdk.App,
   id: string,
-  dockerProperties: DockerProperties,
+  containerProperties: ContainerProperties[],
   domainProperties: DomainProperties,
   tags: Tag[],
   props?: cdk.StackProps)
@@ -119,11 +120,10 @@ export function createStack(scope: cdk.App,
   const certificate = cm.Certificate.import(stack, `${id}Certificate`, {
     certificateArn: domainProperties.domainCertificateArn,
   });
-  const { vpc, fargateService1, fargateService2, loadBalancer } = configureClusterAndServices(id, stack, certificate, dockerProperties);
+  const { vpc, loadBalancer, services } = configureClusterAndServices(id, stack, certificate, containerProperties);
   tags.forEach((tag) => vpc.node.apply(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => loadBalancer.node.apply(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => fargateService1.node.apply(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => fargateService2.node.apply(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) => services.forEach((s) => s.node.apply(new cdk.Tag(tag.name, tag.value))));
 
   const zone = new route53.HostedZoneProvider(stack, {
     domainName: domainProperties.domainName
