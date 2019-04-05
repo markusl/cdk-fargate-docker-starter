@@ -1,4 +1,4 @@
-# CDK Fargat Docker starter kit
+# CDK Fargate Docker starter kit
 
 This repository shows an example of how to deploy a simple docker image to a Fargate cluster using AWS CDK.
 
