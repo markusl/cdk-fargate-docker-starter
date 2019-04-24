@@ -61,6 +61,7 @@ const createTaskDefinition = (id: string, stack: cdk.Stack, containerProperties:
       image: containerProperties.imageProvider(stack),
       memoryLimitMiB: 256,
       environment: containerProperties.environment,
+      logging: new ecs.AwsLogDriver(stack, `${id}Logs`, { streamPrefix: `${id}` }),
     })
     .addPortMappings({
       containerPort: containerProperties.containerPort,
@@ -108,12 +109,14 @@ const configureClusterAndServices = (
   return { vpc, loadBalancer, services };
 };
 
-export function createStack(scope: cdk.App,
+/** Constructs the stack with given properties. */
+export const createStack = (
+  scope: cdk.App,
   id: string,
   containerProperties: ContainerProperties[],
   domainProperties: DomainProperties,
   tags: Tag[],
-  props?: cdk.StackProps)
+  props?: cdk.StackProps) =>
 {
   const stack = new cdk.Stack(scope, id, props);
 

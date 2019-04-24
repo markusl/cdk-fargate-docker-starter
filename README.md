@@ -9,9 +9,10 @@ Features:
 * Fargate cluster with multiple availability zones
 * Nginx server serving static site (just an example of a docker image)
 * Running multiple containers on different context paths
-* Pass environment parameters to the container
-* Configure a domain namem certificate and a HTTPS listener for the service
-* Creates ALB redirect from HTTP to the HTTPS endpoint
+* Pass environment variables/parameters to containers
+* Configure a domain name with a TLS certificate and a HTTPS listener for the service
+* Application load balancer (ALB) redirect from HTTP to the HTTPS endpoint
+* Logging
 * Resource tagging
 
 ## Configure required AWS account
@@ -25,11 +26,24 @@ eval $(assume-role your-aws-role)
 
 ## Initial setup
 
-First you need to have AWS CDK installed and bootstrap the project on wanted account.
+First you need to have the needed build tools and the AWS CDK installed.
+After everything is installed you can bootstrap the project on wanted account.
+
+* Install Docker <https://www.docker.com/get-started>
+
+### Install dependencies
 
 ```bash
+brew install node awscli
 # Install or update CDK globally
 npm i -g aws-cdk
+```
+
+### Bootstrap the project on a selected account
+
+```bash
+# Initial build
+npm run build
 # Initialize the environment
 cdk bootstrap account-id/region
 ```

@@ -18,7 +18,7 @@
     "@aws-cdk/aws-route53": "^0.28.0",
     "@aws-cdk/cdk": "^0.28.0",
     "aws-cdk": "^0.28.0",
-    "typescript": "^3.4.3"
+    "typescript": "^3.4.5"
   },
   "dependencies": {}
 }
