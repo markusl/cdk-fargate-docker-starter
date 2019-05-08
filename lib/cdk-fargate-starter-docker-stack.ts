@@ -120,9 +120,8 @@ export const createStack = (
 {
   const stack = new cdk.Stack(scope, id, props);
 
-  const certificate = cm.Certificate.import(stack, `${id}Certificate`, {
-    certificateArn: domainProperties.domainCertificateArn,
-  });
+  const certificate = cm.Certificate.fromCertificateArn(stack, `${id}Certificate`,
+    domainProperties.domainCertificateArn);
   const { vpc, loadBalancer, services } = configureClusterAndServices(id, stack, certificate, containerProperties);
   tags.forEach((tag) => vpc.node.apply(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => loadBalancer.node.apply(new cdk.Tag(tag.name, tag.value)));
