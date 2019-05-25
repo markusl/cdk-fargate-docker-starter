@@ -34,12 +34,17 @@ const containerDirectory = './app';
 
 const app = new cdk.App();
 
-// alternatively use container image directly from docker hub
-// ecs.ContainerImage.fromDockerHub('amazon/amazon-ecs-sample');
-
 const dockerProperties: ContainerProperties[] = [
   {
-    imageProvider: (scope: cdk.Construct) =>
+    imageProvider: (_: cdk.Construct) =>
+        ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
+    containerPort: 80,
+    id: 'EcsSample',
+    hostHeader: 'site.olmi.be',
+    environment: { APP_ENVIRONMENT: `env-EcsSample` },
+  },
+  {
+    imageProvider: (scope: cdk.Stack) =>
         ecs.ContainerImage.fromAsset(scope, 'AppName1Image', { directory: containerDirectory }),
     containerPort: 80,
     id: 'AppName1',
@@ -53,13 +58,6 @@ const dockerProperties: ContainerProperties[] = [
     id: 'AppName2',
     pathPattern: '/v2*',
     environment: { APP_ENVIRONMENT: `env-AppName2` },
-  },
-  {
-    imageProvider: (_: cdk.Construct) =>
-        ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
-    containerPort: 80,
-    id: 'EcsSample',
-    environment: { APP_ENVIRONMENT: `env-EcsSample` },
   },
 ];
 createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);

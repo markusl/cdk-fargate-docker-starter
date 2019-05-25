@@ -9,6 +9,8 @@ Features:
 * Fargate cluster with multiple availability zones
 * Nginx server serving static site (just an example of a docker image)
 * Running multiple containers on different context paths
+* Host header or path pattern matching for routing
+* Fixed response for unrouted requests
 * Pass environment variables/parameters to containers
 * Configure a domain name with a TLS certificate and a HTTPS listener for the service
 * Application load balancer (ALB) redirect from HTTP to the HTTPS endpoint

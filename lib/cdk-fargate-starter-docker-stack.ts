@@ -21,15 +21,16 @@ interface DomainProperties {
 
 // Definitions for a single service
 export interface ContainerProperties {
-  imageProvider: (scope: cdk.Construct) => ecs.ContainerImage;
+  imageProvider: (scope: cdk.Stack) => ecs.ContainerImage;
   // The container port
   containerPort: number;
   // Unique id of the service
   id: string;
   // Environment variables for the container
   environment: { [key: string]: string; };
-  // Define the path or leave empty for default target
+  // Define the path or host header for routing traffic
   pathPattern?: string;
+  hostHeader?: string;
 }
 
 /// Creates ALB redirect from port 80 to the HTTPS endpoint
@@ -103,9 +104,14 @@ const configureClusterAndServices = (
         port: containerProperties[i].containerPort,
         targets: [service],
         pathPattern: containerProperties[i].pathPattern,
-        // Specify priority only if path is specified
-        priority: containerProperties[i].pathPattern ? i * 10 + 20 : undefined,
+        hostHeader: containerProperties[i].hostHeader,
+        priority: 20 + i * 10,
     }));
+
+  listener.addFixedResponse(`${id}FixedResponse`, {
+    statusCode: '404',
+    messageBody: 'Not Found',
+  });
   return { vpc, loadBalancer, services };
 };
 

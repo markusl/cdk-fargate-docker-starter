@@ -2,3 +2,6 @@
 *.d.ts
 node_modules
 dist
+.cdk.staging/
+*.yaml
+cdk.context.json
