@@ -78,7 +78,7 @@ const configureClusterAndServices = (
   containerProperties: ContainerProperties[]) => {
 
   // NOTE: Limit AZs to avoid reaching resource quotas
-  const vpc = new ec2.VpcNetwork(stack, `${id}Vpc`, { maxAZs: 2 });
+  const vpc = new ec2.Vpc(stack, `${id}Vpc`, { maxAZs: 2 });
   const cluster = new ecs.Cluster(stack, `${id}Cluster`, { vpc });
 
   const services = containerProperties.map((container) => 
@@ -140,10 +140,10 @@ export const createStack = (
   new route53.CnameRecord(stack, `${id}Site`, {
     zone,
     recordName: domainProperties.subdomainName,
-    recordValue: loadBalancer.dnsName,
+    recordValue: loadBalancer.loadBalancerDnsName,
   });
 
   // Output the DNS name where you can access your service
-  new cdk.CfnOutput(stack, `${id}DNS`, { value: loadBalancer.dnsName });
+  new cdk.CfnOutput(stack, `${id}DNS`, { value: loadBalancer.loadBalancerDnsName });
   return stack;
 }
