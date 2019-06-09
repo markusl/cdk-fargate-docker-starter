@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/cdk';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { createStack, ContainerProperties } from '../lib/cdk-fargate-starter-docker-stack';
+import { createStack, ContainerProperties } from '../lib/fargate-docker-stack';
 
 // Name for the app and prefix for all created resources
 const appName = 'AppName';

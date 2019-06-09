@@ -54,7 +54,11 @@ const createHttpsRedirect = (id: string, scope: cdk.Construct, loadBalancer: elb
   return new elbv2.CfnListener(scope, `${id}HttpRedirect`, redirectProps);
 };
 
-const createTaskDefinition = (id: string, stack: cdk.Stack, containerProperties: ContainerProperties) => {
+const createTaskDefinition = (
+  id: string,
+  stack: cdk.Stack,
+  containerProperties: ContainerProperties,
+  tags: Tag[]) => {
   const taskDefinition = new ecs.FargateTaskDefinition(stack, `${id}TaskDefinition`);
   taskDefinition.taskRole.attachManagedPolicy(ssmPolicy);
   taskDefinition
@@ -68,23 +72,23 @@ const createTaskDefinition = (id: string, stack: cdk.Stack, containerProperties:
       containerPort: containerProperties.containerPort,
       protocol: ecs.Protocol.Tcp,
     });
+  tags.forEach((tag) => taskDefinition.node.apply(new cdk.Tag(tag.name, tag.value)));
   return taskDefinition;
 };
 
 const configureClusterAndServices = (
   id: string,
   stack: cdk.Stack,
+  vpc: ec2.Vpc,
   certificate: cm.ICertificate,
-  containerProperties: ContainerProperties[]) => {
-
-  // NOTE: Limit AZs to avoid reaching resource quotas
-  const vpc = new ec2.Vpc(stack, `${id}Vpc`, { maxAZs: 2 });
+  containerProperties: ContainerProperties[],
+  tags: Tag[]) => {
   const cluster = new ecs.Cluster(stack, `${id}Cluster`, { vpc });
 
   const services = containerProperties.map((container) => 
     new ecs.FargateService(stack, `${container.id}FargateService`, {
     cluster,
-    taskDefinition: createTaskDefinition(`${container.id}`, stack, container),
+    taskDefinition: createTaskDefinition(`${container.id}`, stack, container, tags),
   }));
 
   const loadBalancer = new elbv2.ApplicationLoadBalancer(stack, `${id}LoadBalancer`, {
@@ -112,24 +116,35 @@ const configureClusterAndServices = (
     statusCode: '404',
     messageBody: 'Not Found',
   });
-  return { vpc, loadBalancer, services };
+  return { loadBalancer, services };
 };
 
-/** Constructs the stack with given properties. */
+/** Constructs the stack with given properties.
+ * @param scope               The CDK app
+ * @param id                  The application identifier
+ * @param containerProperties Defines the tasks to run
+ * @param domainProperties    Define the domain to be registered with Route 53
+ * @param tags                The tags to apply to created services
+ * @param props               The CDK stack properties
+ * @param vpc                 The VPC to use. Leave as undefined if using a stack created VPC.
+*/
 export const createStack = (
   scope: cdk.App,
   id: string,
   containerProperties: ContainerProperties[],
   domainProperties: DomainProperties,
   tags: Tag[],
-  props?: cdk.StackProps) =>
+  props: cdk.StackProps,
+  vpc?: ec2.Vpc) =>
 {
   const stack = new cdk.Stack(scope, id, props);
 
   const certificate = cm.Certificate.fromCertificateArn(stack, `${id}Certificate`,
     domainProperties.domainCertificateArn);
-  const { vpc, loadBalancer, services } = configureClusterAndServices(id, stack, certificate, containerProperties);
-  tags.forEach((tag) => vpc.node.apply(new cdk.Tag(tag.name, tag.value)));
+  // NOTE: Limit AZs to avoid reaching resource quotas
+  const vpcInUse = vpc ? vpc : new ec2.Vpc(stack, `${id}Vpc`, { maxAZs: 2 });
+  const { loadBalancer, services } = configureClusterAndServices(id, stack, vpcInUse, certificate, containerProperties, tags);
+  tags.forEach((tag) => vpcInUse.node.apply(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => loadBalancer.node.apply(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => services.forEach((s) => s.node.apply(new cdk.Tag(tag.name, tag.value))));
 
