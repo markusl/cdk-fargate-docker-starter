@@ -4,9 +4,6 @@ import * as ecs from '@aws-cdk/aws-ecs';
 import * as route53 from '@aws-cdk/aws-route53';
 import * as cm from '@aws-cdk/aws-certificatemanager';
 import * as elbv2 from '@aws-cdk/aws-elasticloadbalancingv2';
-// tslint:disable:no-unused-expression
-
-const ssmPolicy = 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess';
 
 interface Tag {
   name: string;
@@ -21,7 +18,8 @@ interface DomainProperties {
 
 // Definitions for a single service
 export interface ContainerProperties {
-  imageProvider: (scope: cdk.Stack) => ecs.ContainerImage;
+  // The image to run
+  image: ecs.ContainerImage;
   // The container port
   containerPort: number;
   // Unique id of the service
@@ -60,10 +58,9 @@ const createTaskDefinition = (
   containerProperties: ContainerProperties,
   tags: Tag[]) => {
   const taskDefinition = new ecs.FargateTaskDefinition(stack, `${id}TaskDefinition`);
-  taskDefinition.taskRole.attachManagedPolicy(ssmPolicy);
   taskDefinition
     .addContainer(`${id}Container`, {
-      image: containerProperties.imageProvider(stack),
+      image: containerProperties.image,
       memoryLimitMiB: 256,
       environment: containerProperties.environment,
       logging: new ecs.AwsLogDriver(stack, `${id}Logs`, { streamPrefix: `${id}` }),
@@ -72,7 +69,7 @@ const createTaskDefinition = (
       containerPort: containerProperties.containerPort,
       protocol: ecs.Protocol.Tcp,
     });
-  tags.forEach((tag) => taskDefinition.node.apply(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) => taskDefinition.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
   return taskDefinition;
 };
 
@@ -144,9 +141,9 @@ export const createStack = (
   // NOTE: Limit AZs to avoid reaching resource quotas
   const vpcInUse = vpc ? vpc : new ec2.Vpc(stack, `${id}Vpc`, { maxAZs: 2 });
   const { loadBalancer, services } = configureClusterAndServices(id, stack, vpcInUse, certificate, containerProperties, tags);
-  tags.forEach((tag) => vpcInUse.node.apply(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => loadBalancer.node.apply(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => services.forEach((s) => s.node.apply(new cdk.Tag(tag.name, tag.value))));
+  tags.forEach((tag) => vpcInUse.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) => loadBalancer.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) => services.forEach((s) => s.node.applyAspect(new cdk.Tag(tag.name, tag.value))));
 
   const zone = new route53.HostedZoneProvider(stack, {
     domainName: domainProperties.domainName
@@ -155,8 +152,9 @@ export const createStack = (
   new route53.CnameRecord(stack, `${id}Site`, {
     zone,
     recordName: domainProperties.subdomainName,
-    recordValue: loadBalancer.loadBalancerDnsName,
+    domainName: loadBalancer.loadBalancerDnsName,
   });
+  tags.forEach((tag) => certificate.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
 
   // Output the DNS name where you can access your service
   new cdk.CfnOutput(stack, `${id}DNS`, { value: loadBalancer.loadBalancerDnsName });

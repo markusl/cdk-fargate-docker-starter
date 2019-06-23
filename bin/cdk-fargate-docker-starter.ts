@@ -36,24 +36,21 @@ const app = new cdk.App();
 
 const dockerProperties: ContainerProperties[] = [
   {
-    imageProvider: (_: cdk.Construct) =>
-        ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
+    image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
     containerPort: 80,
     id: 'EcsSample',
     hostHeader: 'site.olmi.be',
     environment: { APP_ENVIRONMENT: `env-EcsSample` },
   },
   {
-    imageProvider: (scope: cdk.Stack) =>
-        ecs.ContainerImage.fromAsset(scope, 'AppName1Image', { directory: containerDirectory }),
+    image: ecs.ContainerImage.fromAsset(containerDirectory),
     containerPort: 80,
     id: 'AppName1',
     pathPattern: '/example*',
     environment: { APP_ENVIRONMENT: `env-AppName1` },
   },
   {
-    imageProvider: (scope: cdk.Construct) =>
-        ecs.ContainerImage.fromAsset(scope, 'AppName2Image', { directory: containerDirectory }),
+    image: ecs.ContainerImage.fromAsset(containerDirectory),
     containerPort: 80,
     id: 'AppName2',
     pathPattern: '/v2*',
@@ -61,4 +58,4 @@ const dockerProperties: ContainerProperties[] = [
   },
 ];
 createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);
-app.run();
+app.synth();
