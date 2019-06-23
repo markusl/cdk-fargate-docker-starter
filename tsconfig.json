@@ -12,7 +12,7 @@
     "strictNullChecks": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": false,
@@ -25,5 +25,5 @@
     "./bin/**/*",
     "./lib/**/*"
   ],
-  "exclude": ["../node_modules"]
+  "exclude": ["cdk.out"]
 }

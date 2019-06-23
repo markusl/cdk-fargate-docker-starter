@@ -154,7 +154,6 @@ export const createStack = (
     recordName: domainProperties.subdomainName,
     domainName: loadBalancer.loadBalancerDnsName,
   });
-  tags.forEach((tag) => certificate.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
 
   // Output the DNS name where you can access your service
   new cdk.CfnOutput(stack, `${id}DNS`, { value: loadBalancer.loadBalancerDnsName });

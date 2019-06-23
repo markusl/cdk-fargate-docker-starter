@@ -2,6 +2,8 @@
 *.d.ts
 node_modules
 dist
-.cdk.staging/
 *.yaml
-cdk.context.json
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
