@@ -1,4 +1,4 @@
-import * as cdk from '@aws-cdk/cdk';
+import * as cdk from '@aws-cdk/core';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as route53 from '@aws-cdk/aws-route53';
@@ -34,7 +34,7 @@ export interface ContainerProperties {
 /// Creates ALB redirect from port 80 to the HTTPS endpoint
 const createHttpsRedirect = (id: string, scope: cdk.Construct, loadBalancer: elbv2.ApplicationLoadBalancer) => {
   const port = 80;
-  loadBalancer.connections.allowFromAnyIPv4(new ec2.TcpPort(port));
+  loadBalancer.connections.allowFromAnyIPv4(ec2.Port.tcp(port));
   const actionProperty: elbv2.CfnListener.ActionProperty = {
     type: 'redirect',
     redirectConfig: {
@@ -63,11 +63,11 @@ const createTaskDefinition = (
       image: containerProperties.image,
       memoryLimitMiB: 256,
       environment: containerProperties.environment,
-      logging: new ecs.AwsLogDriver(stack, `${id}Logs`, { streamPrefix: `${id}` }),
+      logging: new ecs.AwsLogDriver({ streamPrefix: `${id}` }),
     })
     .addPortMappings({
       containerPort: containerProperties.containerPort,
-      protocol: ecs.Protocol.Tcp,
+      protocol: ecs.Protocol.TCP,
     });
   tags.forEach((tag) => taskDefinition.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
   return taskDefinition;
@@ -101,7 +101,7 @@ const configureClusterAndServices = (
   
   services.forEach((service, i) =>
     listener.addTargets(`${containerProperties[i].id}HttpTarget`, {
-        protocol: elbv2.ApplicationProtocol.Http,
+        protocol: elbv2.ApplicationProtocol.HTTP,
         port: containerProperties[i].containerPort,
         targets: [service],
         pathPattern: containerProperties[i].pathPattern,
@@ -145,9 +145,9 @@ export const createStack = (
   tags.forEach((tag) => loadBalancer.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
   tags.forEach((tag) => services.forEach((s) => s.node.applyAspect(new cdk.Tag(tag.name, tag.value))));
 
-  const zone = new route53.HostedZoneProvider(stack, {
+  const zone = route53.HostedZone.fromLookup(stack, `${id}Zone`, {
     domainName: domainProperties.domainName
-  }).findAndImport(stack, `${id}Zone`);
+  });
 
   new route53.CnameRecord(stack, `${id}Site`, {
     zone,

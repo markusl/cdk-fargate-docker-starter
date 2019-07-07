@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import * as cdk from '@aws-cdk/cdk';
+import * as cdk from '@aws-cdk/core';
 import * as ecs from '@aws-cdk/aws-ecs';
 import { createStack, ContainerProperties } from '../lib/fargate-docker-stack';
 
