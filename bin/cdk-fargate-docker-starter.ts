@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
-import * as ecs from '@aws-cdk/aws-ecs';
-import { createStack, ContainerProperties } from '../lib/fargate-docker-stack';
+import { createStack } from '../lib/fargate-docker-stack';
+import { dockerProperties as dockerPropertiesDev, stackTags as stackTagsDev } from './site-config-dev';
+import { dockerProperties as dockerPropertiesProd, stackTags as stackTagsProd } from './site-config-prod';
 
 // Name for the app and prefix for all created resources
 const appName = 'AppName';
@@ -14,48 +16,27 @@ const stackProperties = {
     }
 };
 
-const certificateIdentifier = '797eea2c-26c3-416d-9a24-2f093998383f';
-
 // Use predefined hosted zone and a domain certificate
-const dnsProperties = {
-    domainName: 'olmi.be',
-    subdomainName: 'site',
+const getDnsProperties = (certificateIdentifier: string, domainName: string, subdomainName: string) => ({
+    domainName: domainName,
+    subdomainName: subdomainName,
     domainCertificateArn: `arn:aws:acm:${stackProperties.env.region}:${stackProperties.env.account}:certificate/${certificateIdentifier}`,
-};
-
-const tags: { name: string, value: string }[] = [
-    { name: 'Application', value: 'starter-app' },
-    { name: 'CostCenter', value: '10001' }, 
-    { name: 'WorkOrder', value: 'APROJECT', }
-];
-
-// From where to build the docker image
-const containerDirectory = './app';
+});
 
 const app = new cdk.App();
 
-const dockerProperties: ContainerProperties[] = [
-  {
-    image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
-    containerPort: 80,
-    id: 'EcsSample',
-    hostHeader: 'site.olmi.be',
-    environment: { APP_ENVIRONMENT: `env-EcsSample` },
-  },
-  {
-    image: ecs.ContainerImage.fromAsset(containerDirectory),
-    containerPort: 80,
-    id: 'AppName1',
-    pathPattern: '/example*',
-    environment: { APP_ENVIRONMENT: `env-AppName1` },
-  },
-  {
-    image: ecs.ContainerImage.fromAsset(containerDirectory),
-    containerPort: 80,
-    id: 'AppName2',
-    pathPattern: '/v2*',
-    environment: { APP_ENVIRONMENT: `env-AppName2` },
-  },
-];
-createStack(app, appName, dockerProperties, dnsProperties, tags, stackProperties);
+const environment = app.node.tryGetContext('environment');
+if (environment === undefined) {
+    throw new Error('Environment must be given');
+}
+
+const dnsProperties = getDnsProperties(
+  app.node.tryGetContext('certificateIdentifier'),
+  app.node.tryGetContext('domainName'),
+  app.node.tryGetContext('subdomainName'));
+const stackName = `${appName}-${environment}`;
+
+const dockerProperties = environment === 'dev' ? dockerPropertiesDev : dockerPropertiesProd;
+const stackTags = environment === 'dev' ? stackTagsDev : stackTagsProd;
+createStack(app, stackName, dockerProperties, dnsProperties, stackTags, stackProperties);
 app.synth();

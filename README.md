@@ -31,6 +31,7 @@ eval $(assume-role your-aws-role)
 First you need to have the needed build tools and the AWS CDK installed.
 After everything is installed you can bootstrap the project on wanted account.
 
+* Install Node <https://nodejs.org>
 * Install Docker <https://www.docker.com/get-started>
 
 ### Install dependencies
@@ -47,22 +48,34 @@ npm i -g aws-cdk
 # Initial build
 npm run build
 # Initialize the environment
-cdk bootstrap account-id/region
+cdk bootstrap aws://account-id/region
 ```
 
 ### Domain and certificate setup
 
 1. Create a hosted zone (domain name) in AWS Route 53.
-2. Use AWS Certificate Manager to create a domain certificate
+2. Use AWS Certificate Manager to create a domain certificate for dev and prod domains.
 
-Take a note of the certificated id which is configured in `bin/cdk-fargate-docker-starter.ts`.
+Take a note of the certificated ARN's that are needed for the deployment.
 
-## Incremental deployments
+## Initial deployment
 
-After you have made your changes to the stack, run.
+Check that the stack builds.
 
 ```bash
-npm run build && cdk deploy
+npm run build
+```
+
+Deploy the dev version
+
+```bash
+cdk deploy -c certificateIdentifier=e3da8de9-ec36-4c75-addd-cc62701eac3a -c domainName=olmi.be -c subdomainName=site-dev -c environment=dev
+```
+
+Change the parameters to deploy a prod version:
+
+```bash
+cdk deploy -c certificateIdentifier=2ff0d9f4-98be-477a-a29f-86d871d5e31f -c domainName=olmi.be -c subdomainName=site-prod -c environment=prod
 ```
 
 ## Other commands
