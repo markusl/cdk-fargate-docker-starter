@@ -100,14 +100,17 @@ const configureClusterAndServices = (
     });
   
   services.forEach((service, i) =>
-    listener.addTargets(`${containerProperties[i].id}HttpTarget`, {
+    service.registerLoadBalancerTargets({
+      containerName: `${containerProperties[i].id}Container`,
+      containerPort: containerProperties[i].containerPort,
+      newTargetGroupId: `${containerProperties[i].id}TargetGroup`,
+      listener: ecs.ListenerConfig.applicationListener(listener, {
         protocol: elbv2.ApplicationProtocol.HTTP,
-        port: containerProperties[i].containerPort,
-        targets: [service],
+        priority: 10 + i * 10,
         pathPattern: containerProperties[i].pathPattern,
         hostHeader: containerProperties[i].hostHeader,
-        priority: 20 + i * 10,
-    }));
+    })
+  }));
 
   listener.addFixedResponse(`${id}FixedResponse`, {
     statusCode: '404',

@@ -66,6 +66,12 @@ Check that the stack builds.
 npm run build
 ```
 
+Bootstrap the account.
+
+```bash
+cdk bootstrap aws://<account>/eu-west-1 -c certificateIdentifier=e3da8de9-ec36-4c75-addd-cc62701eac3a -c domainName=olmi.be -c subdomainName=site-dev -c environment=dev
+```
+
 Deploy the dev version
 
 ```bash

@@ -12,12 +12,11 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@aws-cdk/aws-certificatemanager": "^1.3.0",
-    "@aws-cdk/aws-ecs": "^1.3.0",
-    "@aws-cdk/aws-route53": "^1.3.0",
-    "aws-cdk": "^1.3.0",
+    "@aws-cdk/aws-certificatemanager": "^1.13.1",
+    "@aws-cdk/aws-ecs": "^1.13.1",
+    "@aws-cdk/aws-route53": "^1.13.1",
     "source-map-support": "^0.5.13",
-    "typescript": "^3.5.3"
+    "typescript": "^3.6.4"
   },
   "dependencies": {}
 }
