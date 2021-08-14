@@ -1,9 +1,12 @@
-import * as cdk from '@aws-cdk/core';
-import * as ec2 from '@aws-cdk/aws-ec2';
-import * as ecs from '@aws-cdk/aws-ecs';
-import * as route53 from '@aws-cdk/aws-route53';
-import * as cm from '@aws-cdk/aws-certificatemanager';
-import * as elbv2 from '@aws-cdk/aws-elasticloadbalancingv2';
+import * as cdk from 'aws-cdk-lib';
+import {
+  aws_ec2 as ec2,
+  aws_ecs as ecs,
+  aws_route53 as route53,
+  aws_certificatemanager as cm,
+  aws_elasticloadbalancingv2 as elbv2,
+} from 'aws-cdk-lib';
+import { Construct } from 'constructs';
 
 // Structure for tagging objects created
 interface Tag {
@@ -28,12 +31,11 @@ export interface ContainerProperties {
   // Environment variables for the container
   environment: { [key: string]: string; };
   // Define the path or host header for routing traffic
-  pathPattern?: string;
-  hostHeader?: string;
+  conditions: elbv2.ListenerCondition[];
 }
 
 /// Creates ALB redirect from port 80 to the HTTPS endpoint
-const createHttpsRedirect = (id: string, scope: cdk.Construct, loadBalancer: elbv2.ApplicationLoadBalancer) => {
+const createHttpsRedirect = (id: string, scope: Construct, loadBalancer: elbv2.ApplicationLoadBalancer) => {
   const port = 80;
   loadBalancer.connections.allowFromAnyIpv4(ec2.Port.tcp(port));
   const actionProperty: elbv2.CfnListener.ActionProperty = {
@@ -70,7 +72,8 @@ const createTaskDefinition = (
       containerPort: containerProperties.containerPort,
       protocol: ecs.Protocol.TCP,
     });
-  tags.forEach((tag) => taskDefinition.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
+  tags.forEach((tag) =>
+    cdk.Tags.of(taskDefinition).add(tag.name, tag.value));
   return taskDefinition;
 };
 
@@ -82,11 +85,11 @@ const configureClusterAndServices = (
   containerProperties: ContainerProperties[],
   tags: Tag[]) => {
 
-  const services = containerProperties.map((container) => 
+  const services = containerProperties.map((container) =>
     new ecs.FargateService(stack, `${container.id}FargateService`, {
-    cluster,
-    taskDefinition: createTaskDefinition(`${container.id}`, stack, container, tags),
-  }));
+      cluster,
+      taskDefinition: createTaskDefinition(`${container.id}`, stack, container, tags),
+    }));
 
   const loadBalancer = new elbv2.ApplicationLoadBalancer(stack, `${id}LoadBalancer`, {
     vpc: cluster.vpc,
@@ -95,10 +98,10 @@ const configureClusterAndServices = (
   createHttpsRedirect(id, stack, loadBalancer);
 
   const listener = loadBalancer.addListener(`${id}HttpsListener`, {
-      port: 443,
-      certificateArns: [certificate.certificateArn],
-    });
-  
+    port: 443,
+    certificates: [elbv2.ListenerCertificate.fromArn(certificate.certificateArn)],
+  });
+
   services.forEach((service, i) =>
     service.registerLoadBalancerTargets({
       containerName: `${containerProperties[i].id}Container`,
@@ -107,14 +110,14 @@ const configureClusterAndServices = (
       listener: ecs.ListenerConfig.applicationListener(listener, {
         protocol: elbv2.ApplicationProtocol.HTTP,
         priority: 10 + i * 10,
-        pathPattern: containerProperties[i].pathPattern,
-        hostHeader: containerProperties[i].hostHeader,
-    })
-  }));
+        conditions: containerProperties[i].conditions,
+      })
+    }));
 
-  listener.addFixedResponse(`${id}FixedResponse`, {
-    statusCode: '404',
-    messageBody: 'Not Found',
+  listener.addAction(`${id}FixedResponse`, {
+    action: elbv2.ListenerAction.fixedResponse(404, {
+      messageBody: 'Not Found',
+    }),
   });
   return { loadBalancer, services };
 };
@@ -135,19 +138,17 @@ export const createStack = (
   domainProperties: DomainProperties,
   tags: Tag[],
   props: cdk.StackProps,
-  vpc?: ec2.Vpc) =>
-{
+  vpc?: ec2.Vpc) => {
   const stack = new cdk.Stack(scope, id, props);
+  tags.forEach((tag) =>
+    cdk.Tags.of(stack).add(tag.name, tag.value));
 
   const certificate = cm.Certificate.fromCertificateArn(stack, `${id}Certificate`,
     domainProperties.domainCertificateArn);
   // NOTE: Limit AZs to avoid reaching resource quotas
   const vpcInUse = vpc ? vpc : new ec2.Vpc(stack, `${id}Vpc`, { maxAzs: 2 });
   const cluster = new ecs.Cluster(stack, `${id}Cluster`, { vpc: vpcInUse });
-  const { loadBalancer, services } = configureClusterAndServices(id, stack, cluster, certificate, containerProperties, tags);
-  tags.forEach((tag) => vpcInUse.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => loadBalancer.node.applyAspect(new cdk.Tag(tag.name, tag.value)));
-  tags.forEach((tag) => services.forEach((s) => s.node.applyAspect(new cdk.Tag(tag.name, tag.value))));
+  const { loadBalancer } = configureClusterAndServices(id, stack, cluster, certificate, containerProperties, tags);
 
   const zone = route53.HostedZone.fromLookup(stack, `${id}Zone`, {
     domainName: domainProperties.domainName

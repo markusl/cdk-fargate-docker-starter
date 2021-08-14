@@ -1,4 +1,7 @@
-import * as ecs from '@aws-cdk/aws-ecs';
+import {
+  aws_ecs as ecs,
+  aws_elasticloadbalancingv2 as elbv2,
+} from 'aws-cdk-lib';
 import { ContainerProperties } from '../lib/fargate-docker-stack';
 
 // From where to find and build the docker images
@@ -9,21 +12,24 @@ export const dockerProperties: ContainerProperties[] = [
       image: ecs.ContainerImage.fromAsset(containerDirectory),
       containerPort: 80,
       id: 'AppName1',
-      pathPattern: '/example*',
+      conditions: [
+        elbv2.ListenerCondition.pathPatterns(['/example*'])],
       environment: { APP_ENVIRONMENT: `env-AppName1-prod` },
     },
     {
       image: ecs.ContainerImage.fromAsset(containerDirectory),
       containerPort: 80,
       id: 'AppName2',
-      pathPattern: '/v2*',
+      conditions: [
+        elbv2.ListenerCondition.pathPatterns(['/v2*'])],
       environment: { APP_ENVIRONMENT: `env-AppName2-prod` },
     },
     {
       image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
       containerPort: 80,
       id: 'EcsSample',
-      hostHeader: 'site-prod.olmi.be',
+      conditions: [
+        elbv2.ListenerCondition.hostHeaders(['site-prod.olmi.be'])],
       environment: { APP_ENVIRONMENT: `env-EcsSample-dev` },
     },
 ];

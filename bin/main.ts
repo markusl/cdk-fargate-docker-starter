@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
-import * as cdk from '@aws-cdk/core';
+import * as cdk from 'aws-cdk-lib';
 import { createStack } from '../lib/fargate-docker-stack';
 import { dockerProperties as dockerPropertiesDev, stackTags as stackTagsDev } from './site-config-dev';
 import { dockerProperties as dockerPropertiesProd, stackTags as stackTagsProd } from './site-config-prod';

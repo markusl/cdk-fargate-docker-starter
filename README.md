@@ -1,4 +1,4 @@
-# CDK Fargate Docker starter kit
+# CDK Fargate Docker starter kit with AWS CDK v2.0
 
 This repository shows an example of how to deploy a simple docker image to a Fargate cluster using AWS CDK.
 
@@ -6,6 +6,7 @@ Read more of CDK at <https://docs.aws.amazon.com/CDK/latest/userguide/what-is.ht
 
 Features:
 
+* AWS CDK v2.0 using `aws-cdk-lib`
 * Fargate cluster with multiple availability zones
 * Nginx server serving static site (just an example of a docker image)
 * Running multiple containers on different context paths
@@ -45,8 +46,9 @@ npm i -g aws-cdk
 ### Bootstrap the project on a selected account
 
 ```bash
-# Initial build
-npm run build
+# Check that the infra can be synthetized
+cdk synth
+
 # Initialize the environment
 cdk bootstrap aws://account-id/region
 ```
